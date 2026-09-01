@@ -1,32 +1,16 @@
+const isGithubActions = process.env.GITHUB_ACTIONS === "true" || process.env.DEPLOY_TARGET === "gh-pages";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "export",
+  basePath: isGithubActions ? "/omni-tools" : "",
+  assetPrefix: isGithubActions ? "/omni-tools" : undefined,
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
   reactStrictMode: true,
   poweredByHeader: false,
-  headers: async () => {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-        ],
-      },
-    ];
-  },
 };
 
 export default nextConfig;
