@@ -13,6 +13,7 @@ import {
   Receipt,
   LayoutGrid,
   Shield,
+  Landmark,
 } from "lucide-react";
 import { CATEGORIES, TOOLS_CONFIG } from "@/config/tools.config";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   FileText: <FileText className="h-4 w-4 text-rose-500" />,
   TrendingUp: <TrendingUp className="h-4 w-4 text-emerald-500" />,
   Receipt: <Receipt className="h-4 w-4 text-teal-500" />,
+  Landmark: <Landmark className="h-4 w-4 text-indigo-500" />,
 };
 
 interface SidebarProps {

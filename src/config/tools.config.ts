@@ -40,7 +40,7 @@ export const CATEGORIES: CategoryMetadata[] = [
   {
     id: "finance",
     name: "Tài Chính & Đầu Tư",
-    description: "Công cụ tính lãi suất, lãi kép, chia hóa đơn, lịch trả nợ chuẩn xác tuyệt đối",
+    description: "Công cụ tính lãi suất, lãi kép, lãi vay ngân hàng, chia hóa đơn chuẩn xác tuyệt đối",
     icon: "Coins",
     color: "from-emerald-500 to-teal-700",
   },
@@ -75,6 +75,49 @@ export const CATEGORIES: CategoryMetadata[] = [
 ];
 
 export const TOOLS_CONFIG: ToolMetadata[] = [
+  {
+    id: "loan-calculator",
+    name: "Tính Lãi Vay Ngân Hàng",
+    slug: "/finance/loan-calculator",
+    category: "finance",
+    categoryName: "Tài Chính & Đầu Tư",
+    shortDesc: "So sánh lãi vay dư nợ giảm dần vs. dư nợ gốc, hỗ trợ ân hạn nợ gốc và lập lịch trả nợ",
+    fullDesc: "Công cụ tính toán và lập lịch trả nợ vay ngân hàng (mua nhà, mua xe, tiêu dùng) chuẩn xác theo phương thức Dư nợ giảm dần và Dư nợ gốc ban đầu, hỗ trợ thời gian ân hạn nợ gốc kèm biểu đồ phân tích trực quan.",
+    icon: "Landmark",
+    badge: "Mới & Hot",
+    isPopular: true,
+    isNew: true,
+    tags: ["Lãi vay", "Dư nợ giảm dần", "Dư nợ gốc", "Ân hạn nợ gốc", "Lịch trả nợ", "Vay mua nhà", "Vay mua xe"],
+    features: [
+      "So sánh trực quan giữa Dư nợ giảm dần và Dư nợ gốc ban đầu",
+      "Hỗ trợ thời gian ân hạn nợ gốc (Grace Period) từ 0 đến 36 tháng",
+      "Biểu đồ trực quan hóa dòng tiền trả nợ hàng tháng và số dư nợ còn lại",
+      "Bảng lịch trả nợ chi tiết từng tháng với đầy đủ gốc, lãi và dư nợ",
+      "Hỗ trợ xuất lịch trả nợ ra file Excel / CSV tiện lợi"
+    ],
+    formulaTitle: "Công Thức Tính Lãi Vay Ngân Hàng",
+    formulaContent: "Dư nợ giảm dần: Gốc tháng = Dư nợ / Tháng còn lại; Lãi tháng = Dư nợ thực tế * (Lãi suất năm / 12). Dư nợ gốc: Lãi tháng = Gốc ban đầu * (Lãi suất năm / 12).",
+    formulaExample: "Ví dụ: Vay 1.000.000.000 ₫ trong 5 năm (60 tháng), lãi suất 9%/năm, ân hạn nợ gốc 6 tháng. Trong 6 tháng đầu chỉ trả lãi 7.500.000 ₫/tháng. Từ tháng 7 trả gốc 18.518.519 ₫ + lãi giảm dần.",
+    faqs: [
+      {
+        question: "Dư nợ giảm dần và Dư nợ gốc ban đầu khác nhau như thế nào?",
+        answer: "Dư nợ giảm dần tính tiền lãi dựa trên số tiền nợ thực tế còn lại sau khi đã trừ đi tiền gốc đã trả các tháng trước, do đó tiền lãi giảm dần theo thời gian. Dư nợ gốc ban đầu tính tiền lãi cố định trên số tiền vay ban đầu trong suốt toàn bộ kỳ hạn."
+      },
+      {
+        question: "Thời gian ân hạn nợ gốc (Grace Period) là gì?",
+        answer: "Thời gian ân hạn nợ gốc là khoảng thời gian đầu của khoản vay mà khách hàng chỉ cần trả tiền lãi phát sinh hàng tháng, chưa phải trả tiền gốc. Sau khi hết ân hạn, số tiền gốc sẽ được chia đều cho các tháng còn lại của kỳ hạn vay."
+      },
+      {
+        question: "Phương thức nào có lợi hơn cho người vay?",
+        answer: "Phương thức Dư nợ giảm dần luôn mang lại tổng số tiền lãi phải trả ít hơn đáng kể so với Dư nợ gốc ban đầu khi cùng mức lãi suất công bố. Hầu hết các ngân hàng thương mại hiện nay áp dụng phương thức Dư nợ giảm dần cho các khoản vay mua nhà, mua ô tô dài hạn."
+      }
+    ],
+    seo: {
+      title: "Công Cụ Tính Lãi Vay Ngân Hàng - Dư Nợ Giảm Dần & Ân Hạn Gốc | Omni Tools",
+      description: "Tính lãi vay mua nhà, mua xe, tiêu dùng chính xác 100%. So sánh dư nợ giảm dần vs dư nợ gốc, hỗ trợ ân hạn nợ gốc, xem biểu đồ và lịch trả nợ từng tháng.",
+      keywords: ["tính lãi vay", "tính lãi vay ngân hàng", "dư nợ giảm dần", "dư nợ gốc", "ân hạn nợ gốc", "lịch trả nợ vay", "mortgage calculator"]
+    }
+  },
   {
     id: "interest-rate",
     name: "Tính Lãi Suất & Lãi Kép",

@@ -18,6 +18,7 @@ import {
   Calculator,
   FileText,
   CheckCircle2,
+  Landmark,
 } from "lucide-react";
 import {
   CATEGORIES,
@@ -36,6 +37,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   FileText: <FileText className="h-6 w-6 text-rose-500" />,
   TrendingUp: <TrendingUp className="h-6 w-6 text-emerald-500" />,
   Receipt: <Receipt className="h-6 w-6 text-teal-500" />,
+  Landmark: <Landmark className="h-6 w-6 text-indigo-500" />,
 };
 
 export default function HomePage() {
