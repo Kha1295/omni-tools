@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateLoan, compareLoanMethods } from "../loan";
+import { calculateLoan, compareLoanMethods, findLoanInterestRate } from "../loan";
 
 describe("Loan Calculator Math Core (calculateLoan & compareLoanMethods)", () => {
   it("should calculate reducing balance loan repayment correctly", () => {
@@ -82,5 +82,42 @@ describe("Loan Calculator Math Core (calculateLoan & compareLoanMethods)", () =>
     expect(comparison.interestDifference).toBe(
       comparison.flat.totalInterest - comparison.reducing.totalInterest
     );
+  });
+});
+
+describe("Reverse Loan Interest Rate Solver (findLoanInterestRate)", () => {
+  it("should reverse solve interest rate accurately from principal, term and monthly payment", () => {
+    // Example: Vay 50,000,000 VND trong 12 tháng, mỗi tháng trả 4,600,000 VND
+    // Tổng trả = 55,200,000 VND (Tiền lãi 5.2M)
+    // Lãi phẳng = 5.2M / 50M = 10.4%/năm (0.867%/tháng)
+    // Lãi suất thực tế theo dư nợ giảm dần (APR) ~ 18.66%/năm
+    const result = findLoanInterestRate({
+      principal: 50000000,
+      termMonths: 12,
+      monthlyPayment: 4600000,
+    });
+
+    expect(result.principal).toBe(50000000);
+    expect(result.termMonths).toBe(12);
+    expect(result.monthlyPayment).toBe(4600000);
+    expect(result.totalPayment).toBe(55200000);
+    expect(result.totalInterest).toBe(5200000);
+    expect(result.annualRateFlat).toBe(10.4);
+    expect(result.annualRateReducing).toBeGreaterThan(18);
+    expect(result.annualRateReducing).toBeLessThan(20);
+    expect(result.schedule.length).toBe(12);
+  });
+
+  it("should handle reverse calculation when Total Payment is provided instead of monthly payment", () => {
+    const result = findLoanInterestRate({
+      principal: 100000000,
+      termMonths: 24,
+      totalPayment: 124000000, // Lãi 24M trong 2 năm = 12M/năm (12% phẳng)
+    });
+
+    expect(result.principal).toBe(100000000);
+    expect(result.monthlyPayment).toBe(Math.round(124000000 / 24));
+    expect(result.annualRateFlat).toBe(12);
+    expect(result.annualRateReducing).toBeGreaterThan(20);
   });
 });

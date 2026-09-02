@@ -40,6 +40,27 @@ export interface LoanComparisonResult {
   interestDifference: number; // Chênh lệch tiền lãi giữa 2 phương thức
 }
 
+export interface ReverseLoanInput {
+  principal: number | string; // Tổng tiền vay
+  termMonths: number; // Số tháng trả
+  monthlyPayment?: number | string; // Số tiền phải trả mỗi tháng
+  totalPayment?: number | string; // Tổng gốc + lãi (optional)
+}
+
+export interface ReverseLoanResult {
+  principal: number;
+  termMonths: number;
+  monthlyPayment: number;
+  totalPayment: number;
+  totalInterest: number;
+  annualRateReducing: number; // Lãi suất năm theo dư nợ giảm dần (APR, %/năm)
+  monthlyRateReducing: number; // Lãi suất tháng theo dư nợ giảm dần (%/tháng)
+  annualRateFlat: number; // Lãi suất phẳng theo dư nợ gốc (%/năm)
+  monthlyRateFlat: number; // Lãi suất phẳng theo dư nợ gốc (%/tháng)
+  interestRatio: number; // Tỷ lệ lãi / gốc (%)
+  schedule: MonthlyLoanSchedule[];
+}
+
 /**
  * Calculates loan repayment schedule and summary using exact Decimal.js math
  */
@@ -159,5 +180,118 @@ export function compareLoanMethods(
     reducing,
     flat,
     interestDifference,
+  };
+}
+
+/**
+ * Reverse loan calculation: Finds the exact effective interest rate (Reducing APR and Flat Rate)
+ * based on Principal, Term, and Monthly Payment (or Total Payment).
+ */
+export function findLoanInterestRate(input: ReverseLoanInput): ReverseLoanResult {
+  const P = new Decimal(input.principal || 0);
+  const N = Math.max(1, input.termMonths || 1);
+
+  // Determine monthly payment PMT and total payment
+  let PMT = new Decimal(0);
+  let totalPaymentDec = new Decimal(0);
+
+  if (input.monthlyPayment && new Decimal(input.monthlyPayment).gt(0)) {
+    PMT = new Decimal(input.monthlyPayment);
+    totalPaymentDec = PMT.times(N);
+  } else if (input.totalPayment && new Decimal(input.totalPayment).gt(0)) {
+    totalPaymentDec = new Decimal(input.totalPayment);
+    PMT = totalPaymentDec.div(N);
+  } else {
+    // Default fallback
+    PMT = P.div(N);
+    totalPaymentDec = P;
+  }
+
+  const totalInterestDec = Decimal.max(0, totalPaymentDec.minus(P));
+  const interestRatio = P.gt(0)
+    ? totalInterestDec.div(P).times(100).toDecimalPlaces(2).toNumber()
+    : 0;
+
+  // 1. Flat Rate calculation (Lãi suất phẳng)
+  // Flat annual rate = (Total Interest / (P * (N/12))) * 100
+  let annualRateFlat = 0;
+  let monthlyRateFlat = 0;
+  if (P.gt(0)) {
+    const years = new Decimal(N).div(12);
+    annualRateFlat = totalInterestDec.div(P.times(years)).times(100).toDecimalPlaces(2).toNumber();
+    monthlyRateFlat = totalInterestDec.div(P.times(N)).times(100).toDecimalPlaces(2).toNumber();
+  }
+
+  // 2. Reducing Balance APR calculation (Lãi suất thực tế theo dư nợ giảm dần)
+  // Solve for monthly rate r: PMT * (1 - (1+r)^(-N)) / r = P
+  let monthlyRateReducingDec = new Decimal(0);
+
+  if (totalPaymentDec.gt(P) && P.gt(0)) {
+    // Binary search for r in [0, 5.0] (0% to 500% monthly)
+    let low = 0.0;
+    let high = 5.0;
+
+    for (let iter = 0; iter < 80; iter++) {
+      const mid = (low + high) / 2;
+      // Calculate present value of annuity with rate mid
+      // PV = PMT * (1 - (1 + mid)^(-N)) / mid
+      const pv = (PMT.toNumber() * (1 - Math.pow(1 + mid, -N))) / mid;
+
+      if (pv > P.toNumber()) {
+        // Rate is too low -> need higher rate to reduce PV
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+
+    monthlyRateReducingDec = new Decimal((low + high) / 2);
+  }
+
+  const monthlyRateReducing = monthlyRateReducingDec.times(100).toDecimalPlaces(2).toNumber();
+  const annualRateReducing = monthlyRateReducingDec.times(12).times(100).toDecimalPlaces(2).toNumber();
+
+  // 3. Generate monthly schedule based on effective APR
+  const schedule: MonthlyLoanSchedule[] = [];
+  let currentBalance = P;
+  const mRate = monthlyRateReducingDec;
+
+  for (let m = 1; m <= N; m++) {
+    const startingBal = currentBalance;
+    const interestPay = startingBal.times(mRate);
+    let principalPay = PMT.minus(interestPay);
+
+    if (m === N || principalPay.gt(currentBalance)) {
+      principalPay = currentBalance;
+    }
+
+    const actualMonthlyTotal = principalPay.plus(interestPay);
+    const endingBal = Decimal.max(0, currentBalance.minus(principalPay));
+
+    schedule.push({
+      month: m,
+      startingBalance: startingBal.toDecimalPlaces(0).toNumber(),
+      principalPayment: principalPay.toDecimalPlaces(0).toNumber(),
+      interestPayment: interestPay.toDecimalPlaces(0).toNumber(),
+      totalMonthlyPayment: actualMonthlyTotal.toDecimalPlaces(0).toNumber(),
+      endingBalance: endingBal.toDecimalPlaces(0).toNumber(),
+      isGracePeriod: false,
+    });
+
+    currentBalance = endingBal;
+  }
+
+  return {
+    principal: P.toDecimalPlaces(0).toNumber(),
+    termMonths: N,
+    monthlyPayment: PMT.toDecimalPlaces(0).toNumber(),
+    totalPayment: totalPaymentDec.toDecimalPlaces(0).toNumber(),
+    totalInterest: totalInterestDec.toDecimalPlaces(0).toNumber(),
+    annualRateReducing,
+    monthlyRateReducing,
+    annualRateFlat,
+    monthlyRateFlat,
+    interestRatio,
+    schedule,
   };
 }

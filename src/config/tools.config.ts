@@ -81,24 +81,32 @@ export const TOOLS_CONFIG: ToolMetadata[] = [
     slug: "/finance/loan-calculator",
     category: "finance",
     categoryName: "Tài Chính & Đầu Tư",
-    shortDesc: "So sánh lãi vay dư nợ giảm dần vs. dư nợ gốc, hỗ trợ ân hạn nợ gốc và lập lịch trả nợ",
-    fullDesc: "Công cụ tính toán và lập lịch trả nợ vay ngân hàng (mua nhà, mua xe, tiêu dùng) chuẩn xác theo phương thức Dư nợ giảm dần và Dư nợ gốc ban đầu, hỗ trợ thời gian ân hạn nợ gốc kèm biểu đồ phân tích trực quan.",
+    shortDesc: "Lập lịch trả nợ (Dư nợ giảm dần vs. Dư nợ gốc, ân hạn) và Tra cứu/Tìm lãi suất thực tế",
+    fullDesc: "Công cụ tính toán và lập lịch trả nợ vay ngân hàng chuẩn xác theo phương thức Dư nợ giảm dần và Dư nợ gốc ban đầu, hỗ trợ thời gian ân hạn nợ gốc, kèm tính năng tìm ngược lãi suất thực tế (APR / Lãi phẳng) từ số tiền trả mỗi tháng.",
     icon: "Landmark",
     badge: "Mới & Hot",
     isPopular: true,
     isNew: true,
-    tags: ["Lãi vay", "Dư nợ giảm dần", "Dư nợ gốc", "Ân hạn nợ gốc", "Lịch trả nợ", "Vay mua nhà", "Vay mua xe"],
+    tags: ["Lãi vay", "Tìm lãi suất", "Dư nợ giảm dần", "Dư nợ gốc", "Ân hạn nợ gốc", "Vay trả góp", "Lịch trả nợ"],
     features: [
-      "So sánh trực quan giữa Dư nợ giảm dần và Dư nợ gốc ban đầu",
+      "Tính lịch trả nợ theo phương thức Dư nợ giảm dần và Dư nợ gốc ban đầu",
+      "Tính năng Tìm / Tra cứu lãi suất thực tế (APR) khi biết số tiền trả mỗi tháng hoặc tổng tiền",
       "Hỗ trợ thời gian ân hạn nợ gốc (Grace Period) từ 0 đến 36 tháng",
       "Biểu đồ trực quan hóa dòng tiền trả nợ hàng tháng và số dư nợ còn lại",
-      "Bảng lịch trả nợ chi tiết từng tháng với đầy đủ gốc, lãi và dư nợ",
-      "Hỗ trợ xuất lịch trả nợ ra file Excel / CSV tiện lợi"
+      "Bảng lịch trả nợ chi tiết từng tháng và hỗ trợ xuất file Excel / CSV"
     ],
-    formulaTitle: "Công Thức Tính Lãi Vay Ngân Hàng",
-    formulaContent: "Dư nợ giảm dần: Gốc tháng = Dư nợ / Tháng còn lại; Lãi tháng = Dư nợ thực tế * (Lãi suất năm / 12). Dư nợ gốc: Lãi tháng = Gốc ban đầu * (Lãi suất năm / 12).",
-    formulaExample: "Ví dụ: Vay 1.000.000.000 ₫ trong 5 năm (60 tháng), lãi suất 9%/năm, ân hạn nợ gốc 6 tháng. Trong 6 tháng đầu chỉ trả lãi 7.500.000 ₫/tháng. Từ tháng 7 trả gốc 18.518.519 ₫ + lãi giảm dần.",
+    formulaTitle: "Công Thức Tính & Tìm Lãi Suất Vay",
+    formulaContent: "Tìm APR (dư nợ giảm dần): Giải phương trình hiện giá PV = PMT * [1 - (1+r)^(-N)] / r. Lãi phẳng: Lãi phẳng/năm = [Tổng lãi / (Gốc * Năm)] * 100%.",
+    formulaExample: "Ví dụ: Vay 50.000.000 ₫ trong 12 tháng, mỗi tháng trả 4.600.000 ₫ (Tổng trả 55.200.000 ₫). Mức lãi phẳng chỉ là 10.4%/năm, nhưng Lãi suất thực tế theo dư nợ giảm dần (APR) lên tới 18.66%/năm!",
     faqs: [
+      {
+        question: "Làm thế nào để tìm ra mức lãi suất thực tế khi chỉ biết số tiền trả góp mỗi tháng?",
+        answer: "Bạn chỉ cần chuyển sang chế độ 'Tìm Lãi Suất Thực Tế', nhập số tiền vay gốc ban đầu, số tháng trả và số tiền phải trả mỗi tháng (hoặc tổng tiền). Hệ thống sẽ tự động giải phương trình tài chính bằng thuật toán giải số chính xác cao để đưa ra cả Lãi suất thực tế (APR) và Lãi suất phẳng."
+      },
+      {
+        question: "Tại sao Lãi suất thực tế (APR) lại cao hơn nhiều so với Lãi suất phẳng quảng cáo?",
+        answer: "Vì khi trả góp hàng tháng, bạn liên tục trả bớt một phần nợ gốc, do đó số nợ thực tế bạn đang nợ ngân hàng giảm dần theo thời gian. Nếu tiền lãi vẫn tính cố định trên gốc ban đầu (lãi phẳng), chi phí lãi thực tế bạn phải gánh trên số tiền đang nợ (APR) sẽ cao gần gấp đôi mức lãi phẳng công bố."
+      },
       {
         question: "Dư nợ giảm dần và Dư nợ gốc ban đầu khác nhau như thế nào?",
         answer: "Dư nợ giảm dần tính tiền lãi dựa trên số tiền nợ thực tế còn lại sau khi đã trừ đi tiền gốc đã trả các tháng trước, do đó tiền lãi giảm dần theo thời gian. Dư nợ gốc ban đầu tính tiền lãi cố định trên số tiền vay ban đầu trong suốt toàn bộ kỳ hạn."
@@ -106,10 +114,6 @@ export const TOOLS_CONFIG: ToolMetadata[] = [
       {
         question: "Thời gian ân hạn nợ gốc (Grace Period) là gì?",
         answer: "Thời gian ân hạn nợ gốc là khoảng thời gian đầu của khoản vay mà khách hàng chỉ cần trả tiền lãi phát sinh hàng tháng, chưa phải trả tiền gốc. Sau khi hết ân hạn, số tiền gốc sẽ được chia đều cho các tháng còn lại của kỳ hạn vay."
-      },
-      {
-        question: "Phương thức nào có lợi hơn cho người vay?",
-        answer: "Phương thức Dư nợ giảm dần luôn mang lại tổng số tiền lãi phải trả ít hơn đáng kể so với Dư nợ gốc ban đầu khi cùng mức lãi suất công bố. Hầu hết các ngân hàng thương mại hiện nay áp dụng phương thức Dư nợ giảm dần cho các khoản vay mua nhà, mua ô tô dài hạn."
       }
     ],
     seo: {
