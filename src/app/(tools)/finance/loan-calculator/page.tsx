@@ -957,15 +957,15 @@ export default function LoanCalculatorPage() {
                 </div>
               </div>
 
-              {/* Recharts Table / Cashflow Tabs */}
+              {/* Charts & Table Tabs for Reverse Solver */}
               <Card className="border-border/80 shadow-md">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between border-b border-border/40">
                   <div>
                     <CardTitle className="text-base font-bold">
-                      Bảng Lịch Trả Nợ Chi Tiết
+                      Trực Quan Hóa Lịch Trả Nợ & Dư Nợ
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Phân bổ gốc & lãi hàng tháng theo mức lãi suất thực tế {reverseResult.annualRateReducing}%/năm
+                      Theo dõi số tiền trả từng tháng (gốc vs lãi) và biểu đồ dư nợ theo lãi suất thực tế {reverseResult.annualRateReducing}%/năm
                     </CardDescription>
                   </div>
                   <Button
@@ -978,43 +978,202 @@ export default function LoanCalculatorPage() {
                     <span>Xuất CSV</span>
                   </Button>
                 </CardHeader>
+
                 <CardContent className="p-4 sm:p-6">
-                  <div className="max-h-[300px] overflow-y-auto border border-border/80 rounded-xl">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-muted/80 text-muted-foreground font-semibold sticky top-0 backdrop-blur-md">
-                        <tr>
-                          <th className="p-3">Kỳ</th>
-                          <th className="p-3">Dư nợ đầu kỳ</th>
-                          <th className="p-3">Tiền gốc</th>
-                          <th className="p-3">Tiền lãi</th>
-                          <th className="p-3">Tổng trả</th>
-                          <th className="p-3 text-right">Dư nợ còn lại</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        {reverseResult.schedule.map((row) => (
-                          <tr key={row.month} className="hover:bg-muted/30 transition-colors">
-                            <td className="p-3 font-bold text-foreground">
-                              Tháng {row.month}
-                            </td>
-                            <td className="p-3">{formatCurrency(row.startingBalance)}</td>
-                            <td className="p-3 font-medium text-foreground">
-                              {formatCurrency(row.principalPayment)}
-                            </td>
-                            <td className="p-3 text-amber-600 dark:text-amber-400">
-                              {formatCurrency(row.interestPayment)}
-                            </td>
-                            <td className="p-3 font-bold text-primary">
-                              {formatCurrency(row.totalMonthlyPayment)}
-                            </td>
-                            <td className="p-3 text-right font-extrabold text-foreground">
-                              {formatCurrency(row.endingBalance)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <Tabs defaultValue="cashflow">
+                    <TabsList className="mb-4">
+                      <TabsTrigger
+                        value="cashflow"
+                        icon={<BarChart2 className="h-4 w-4" />}
+                      >
+                        Dòng Tiền Hàng Tháng
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="balance"
+                        icon={<TrendingDown className="h-4 w-4" />}
+                      >
+                        Dư Nợ Còn Lại
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="table"
+                        icon={<TableIcon className="h-4 w-4" />}
+                      >
+                        Bảng Lịch Trả Nợ
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Tab 1: Monthly Cashflow Bar Chart */}
+                    <TabsContent value="cashflow">
+                      <div className="h-[320px] w-full pt-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={chartData}
+                            margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="hsl(var(--border))"
+                              opacity={0.6}
+                            />
+                            <XAxis
+                              dataKey="month"
+                              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                              tickFormatter={(val: number) => `T${val}`}
+                            />
+                            <YAxis
+                              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                              tickFormatter={(val: number) =>
+                                val >= 1000000000
+                                  ? `${(val / 1000000000).toFixed(1)}T`
+                                  : `${(val / 1000000).toFixed(0)}M`
+                              }
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--card))",
+                                borderColor: "hsl(var(--border))",
+                                borderRadius: "12px",
+                                boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                                fontSize: "12px",
+                              }}
+                              formatter={(value: number | string | readonly (number | string)[] | undefined) => [
+                                formatCurrency(typeof value === "number" || typeof value === "string" ? value : 0),
+                                "",
+                              ]}
+                            />
+                            <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
+                            <Bar
+                              dataKey="Tiền gốc"
+                              stackId="a"
+                              fill="#6366f1"
+                              radius={[0, 0, 0, 0]}
+                            />
+                            <Bar
+                              dataKey="Tiền lãi"
+                              stackId="a"
+                              fill="#f59e0b"
+                              radius={[4, 4, 0, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </TabsContent>
+
+                    {/* Tab 2: Loan Balance Area Chart */}
+                    <TabsContent value="balance">
+                      <div className="h-[320px] w-full pt-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={chartData}
+                            margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                          >
+                            <defs>
+                              <linearGradient
+                                id="colorBalanceReverse"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                              >
+                                <stop
+                                  offset="5%"
+                                  stopColor="#6366f1"
+                                  stopOpacity={0.4}
+                                />
+                                <stop
+                                  offset="95%"
+                                  stopColor="#6366f1"
+                                  stopOpacity={0.0}
+                                />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="hsl(var(--border))"
+                              opacity={0.6}
+                            />
+                            <XAxis
+                              dataKey="month"
+                              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                              tickFormatter={(val: number) => `T${val}`}
+                            />
+                            <YAxis
+                              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                              tickFormatter={(val: number) =>
+                                val >= 1000000000
+                                  ? `${(val / 1000000000).toFixed(1)}T`
+                                  : `${(val / 1000000).toFixed(0)}M`
+                              }
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--card))",
+                                borderColor: "hsl(var(--border))",
+                                borderRadius: "12px",
+                                boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                                fontSize: "12px",
+                              }}
+                              formatter={(value: number | string | readonly (number | string)[] | undefined) => [
+                                formatCurrency(typeof value === "number" || typeof value === "string" ? value : 0),
+                                "",
+                              ]}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="Dư nợ còn lại"
+                              stroke="#6366f1"
+                              strokeWidth={2}
+                              fillOpacity={1}
+                              fill="url(#colorBalanceReverse)"
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </TabsContent>
+
+                    {/* Tab 3: Detailed Amortization Table */}
+                    <TabsContent value="table">
+                      <div className="max-h-[340px] overflow-y-auto border border-border/80 rounded-xl">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-muted/80 text-muted-foreground font-semibold sticky top-0 backdrop-blur-md">
+                            <tr>
+                              <th className="p-3">Kỳ</th>
+                              <th className="p-3">Dư nợ đầu kỳ</th>
+                              <th className="p-3">Tiền gốc</th>
+                              <th className="p-3">Tiền lãi</th>
+                              <th className="p-3">Tổng trả</th>
+                              <th className="p-3 text-right">Dư nợ còn lại</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/60">
+                            {reverseResult.schedule.map((row) => (
+                              <tr
+                                key={row.month}
+                                className="hover:bg-muted/30 transition-colors"
+                              >
+                                <td className="p-3 font-bold text-foreground">
+                                  Tháng {row.month}
+                                </td>
+                                <td className="p-3">{formatCurrency(row.startingBalance)}</td>
+                                <td className="p-3 font-medium text-foreground">
+                                  {formatCurrency(row.principalPayment)}
+                                </td>
+                                <td className="p-3 text-amber-600 dark:text-amber-400">
+                                  {formatCurrency(row.interestPayment)}
+                                </td>
+                                <td className="p-3 font-bold text-primary">
+                                  {formatCurrency(row.totalMonthlyPayment)}
+                                </td>
+                                <td className="p-3 text-right font-extrabold text-foreground">
+                                  {formatCurrency(row.endingBalance)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </div>
