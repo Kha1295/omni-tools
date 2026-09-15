@@ -31,7 +31,13 @@ import {
   Calendar,
   Clock,
   ArrowUpRight,
+  ShieldAlert,
+  Users,
+  Layers,
 } from "lucide-react";
+import { getAuthStatusAction } from "@/app/actions/auth.action";
+import { AdminUsersTab } from "./AdminUsersTab";
+import { AdminPbacTab } from "./AdminPbacTab";
 import {
   AreaChart,
   Area,
@@ -75,7 +81,18 @@ export interface CalculationRecord {
   createdAt: string;
 }
 
+interface AdminUserInfo {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+}
+
 export default function AdminDashboardPage() {
+  const [currentUser, setCurrentUser] = React.useState<AdminUserInfo | null>(null);
+  const [authChecking, setAuthChecking] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState<"storage" | "users" | "pbac">("storage");
+
   const [stats, setStats] = React.useState<AdminDashboardStats | null>(null);
   const [loadingStats, setLoadingStats] = React.useState(true);
 
@@ -93,6 +110,17 @@ export default function AdminDashboardPage() {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [actionLoading, setActionLoading] = React.useState(false);
   const [feedbackMessage, setFeedbackMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  React.useEffect(() => {
+    getAuthStatusAction().then((res) => {
+      if (res.isAuthenticated && res.user) {
+        setCurrentUser(res.user);
+      } else {
+        setCurrentUser(null);
+      }
+      setAuthChecking(false);
+    });
+  }, []);
 
   // Load Stats
   const loadStats = React.useCallback(async () => {
@@ -220,6 +248,54 @@ export default function AdminDashboardPage() {
 
   const totalPages = Math.ceil(totalRecords / pageSize);
 
+  if (authChecking) {
+    return (
+      <div className="py-24 text-center text-muted-foreground text-sm flex items-center justify-center gap-2">
+        <RefreshCw className="h-5 w-5 animate-spin text-primary" />
+        <span>Đang xác minh phân quyền quản trị...</span>
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return (
+      <div className="max-w-lg mx-auto py-20 px-4 text-center space-y-6">
+        <div className="w-16 h-16 mx-auto rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-xl shadow-red-500/10">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <Badge variant="danger" className="text-xs font-semibold px-3 py-1">
+            403 Forbidden Access
+          </Badge>
+          <h1 className="text-2xl font-black tracking-tight text-foreground">
+            Quyền Truy Cập Bị Từ Chối
+          </h1>
+          <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
+            Khu vực Quản trị tối cao (Admin Control Center) chỉ dành riêng cho tài khoản có vai trò <strong>Admin</strong>. Người dùng thông thường không có quyền dọn dẹp hệ thống hoặc phân quyền.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {!currentUser ? (
+            <Link href="/login">
+              <Button className="w-full sm:w-auto font-semibold">
+                Đăng nhập tài khoản Admin
+              </Button>
+            </Link>
+          ) : (
+            <p className="text-xs text-muted-foreground w-full">
+              Bạn đang đăng nhập với tài khoản: <strong>{currentUser.email}</strong> (Vai trò: {currentUser.role})
+            </p>
+          )}
+          <Link href="/">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Về trang chủ công cụ
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       {/* Top Header */}
@@ -227,13 +303,13 @@ export default function AdminDashboardPage() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary mb-2">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Supabase PostgreSQL Production</span>
+            <span>Admin Control Center • Supabase PostgreSQL</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-            Bảng Quản Trị Hệ Thống & Dung Lượng
+            Bảng Quản Trị Hệ Thống & Phân Quyền
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Theo dõi dung lượng lưu trữ, thống kê lịch sử tính toán và bộ công cụ dọn dẹp dữ liệu rác
+            Quản trị viên: <span className="font-semibold text-foreground">{currentUser.name || currentUser.email}</span> • Dọn rác, quản lý người dùng và phân quyền kép RBAC/PBAC
           </p>
         </div>
 
@@ -261,7 +337,58 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Feedback Toast Banner */}
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-border/60 pb-3 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("storage")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            activeTab === "storage"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <HardDrive className="h-4 w-4" />
+          <span>Dọn Dẹp Rác & Dung Lượng</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("users")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            activeTab === "users"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          <span>Quản Lý Người Dùng (RBAC)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("pbac")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            activeTab === "pbac"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <Layers className="h-4 w-4" />
+          <span>Ma Trận Tính Năng Động (PBAC)</span>
+        </button>
+      </div>
+
+      {/* Tab 2 Content */}
+      {activeTab === "users" && <AdminUsersTab currentAdminEmail={currentUser.email} />}
+
+      {/* Tab 3 Content */}
+      {activeTab === "pbac" && <AdminPbacTab />}
+
+      {/* Tab 1 Content (Storage & Cleaner) */}
+      {activeTab === "storage" && (
+        <div className="space-y-8">
+          {/* Feedback Toast Banner */}
       {feedbackMessage && (
         <div
           className={`p-4 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all ${
@@ -761,6 +888,8 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </Card>
+        </div>
+      )}
     </div>
   );
 }

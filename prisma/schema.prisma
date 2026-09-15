@@ -8,9 +8,143 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Model lưu trữ mọi snapshot tính toán (Hỗ trợ JSONB đa năng)
+// ==========================================
+// 1. NGƯỜI DÙNG & PHÂN QUYỀN (RBAC & PBAC)
+// ==========================================
+
+model User {
+  id                String                 @id @default(cuid())
+  email             String                 @unique
+  passwordHash      String
+  name              String?
+  roleId            String
+  role              Role                   @relation(fields: [roleId], references: [id])
+  isActive          Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  customPermissions UserCustomPermission[]
+  toolLogs          ToolLog[]
+  bookmarks         UserBookmark[]
+  savedCalculations SavedCalculation[]
+
+  @@index([roleId])
+  @@index([email])
+}
+
+model Role {
+  id              String           @id @default(cuid())
+  code            String           @unique // "admin", "normal", "vip_member", etc.
+  name            String
+  description     String?
+  isSystem        Boolean          @default(false)
+  users           User[]
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Permission {
+  id                    String                 @id @default(cuid())
+  code                  String                 @unique // e.g. "tool:calculate", "tool:export", "admin:vacuum"
+  name                  String
+  category              String                 // "tool", "export", "admin", "system"
+  description           String?
+  rolePermissions       RolePermission[]
+  userCustomPermissions UserCustomPermission[]
+  featurePermissions    FeaturePermission[]
+  createdAt             DateTime               @default(now())
+
+  @@index([category])
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+}
+
+model UserCustomPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  isGranted    Boolean    // true = cấp thêm (grant), false = thu hồi cụ thể (revoke)
+  reason       String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, permissionId])
+}
+
+model Feature {
+  id                 String              @id @default(cuid())
+  code               String              @unique // "export_csv", "export_pdf", "admin_panel", "cloud_sync"
+  name               String
+  description        String?
+  isPublic           Boolean             @default(false) // Cho phép guest sử dụng không cần đăng nhập
+  featurePermissions FeaturePermission[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model FeaturePermission {
+  id           String     @id @default(cuid())
+  featureId    String
+  feature      Feature    @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([featureId, permissionId])
+}
+
+// ==========================================
+// 2. NHẬT KÝ SỬ DỤNG & LỊCH SỬ TÍNH TOÁN
+// ==========================================
+
+model ToolLog {
+  id              String   @id @default(cuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolId          String   // e.g. "loan-calculator", "bill-split"
+  title           String?  // Tên gợi nhớ bản tính
+  inputData       Json     // Input params (JSON)
+  resultData      Json     // Calculation result (JSON)
+  executionTimeMs Int?     // Thời gian tính toán
+  ipAddress       String?
+  isStarred       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([userId, toolId])
+  @@index([createdAt])
+  @@index([isStarred])
+}
+
+model UserBookmark {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolId      String
+  customTitle String?
+  presetInput Json?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, toolId])
+}
+
+// ==========================================
+// 3. TIỆN ÍCH CHIA SẺ & TỶ GIÁ / LÃI SUẤT
+// ==========================================
+
 model SavedCalculation {
   id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   toolId        String   // e.g., "loan-calculator", "bill-split", "interest-rate", "currency-converter"
   title         String   // Tiêu đề gợi nhớ cho phương án tính
   inputData     Json     // Dynamic JSON payload lưu toàn bộ tham số đầu vào
@@ -23,13 +157,13 @@ model SavedCalculation {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@index([userId])
   @@index([toolId])
   @@index([shareSlug])
   @@index([createdAt])
   @@index([isStarred])
 }
 
-// Bảng tỷ giá ngoại tệ động (Cho công cụ quy đổi tiền tệ)
 model ExchangeRate {
   id           String   @id @default(cuid())
   currencyCode String   @unique // "USD", "EUR", "JPY", "GBP", etc.
@@ -39,7 +173,6 @@ model ExchangeRate {
   updatedAt    DateTime @updatedAt
 }
 
-// Bảng biểu lãi suất ngân hàng Việt Nam (Cho công cụ tra cứu & tính lãi vay)
 model BankRate {
   id          String   @id @default(cuid())
   bankCode    String   // "VCB", "BIDV", "TCB", "MBB", etc.
@@ -52,10 +185,9 @@ model BankRate {
   @@unique([bankCode, termMonths])
 }
 
-// Nhật ký kiểm toán tác vụ Admin (Lịch sử dọn dẹp dữ liệu rác)
 model AdminAuditLog {
   id              String   @id @default(cuid())
-  action          String   // e.g. "VACUUM_CLEANUP", "DELETE_RECORD", "BULK_DELETE"
+  action          String   // e.g. "VACUUM_CLEANUP", "DELETE_RECORD", "BULK_DELETE", "UPDATE_ROLE", "OVERRIDE_PERMISSION"
   recordsAffected Int      @default(0)
   bytesFreed      Int      @default(0)
   details         Json?
@@ -63,4 +195,3 @@ model AdminAuditLog {
 
   @@index([createdAt])
 }
-

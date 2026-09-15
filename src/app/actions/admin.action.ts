@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/rbac";
 
 export interface ToolStorageStat {
   toolId: string;
@@ -47,6 +48,7 @@ const TOOL_NAMES: Record<string, string> = {
 
 export async function getAdminStatsAction(): Promise<AdminDashboardStats> {
   try {
+    await requireAdmin();
     const totalRecords = await prisma.savedCalculation.count();
     const starredCount = await prisma.savedCalculation.count({ where: { isStarred: true } });
     
@@ -198,6 +200,7 @@ export interface QueryCalculationsParams {
 
 export async function getCalculationsTableAction(params: QueryCalculationsParams) {
   try {
+    await requireAdmin();
     const page = Math.max(1, params.page || 1);
     const pageSize = Math.min(50, Math.max(5, params.pageSize || 10));
     const skip = (page - 1) * pageSize;
@@ -264,6 +267,7 @@ export interface CleanupCriteria {
 
 export async function cleanupJunkDataAction(criteria: CleanupCriteria) {
   try {
+    await requireAdmin();
     const where: Prisma.SavedCalculationWhereInput = {
       isStarred: false, // TUYỆT ĐỐI BẢO VỆ CÁC BẢN GHI ĐƯỢC ĐÁNH SAO
     };
@@ -326,6 +330,7 @@ export async function cleanupJunkDataAction(criteria: CleanupCriteria) {
 
 export async function bulkDeleteCalculationsAction(ids: string[]) {
   try {
+    await requireAdmin();
     if (!ids || ids.length === 0) return { success: false, error: "Chưa chọn bản ghi nào" };
 
     const agg = await prisma.savedCalculation.aggregate({

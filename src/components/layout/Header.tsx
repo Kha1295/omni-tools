@@ -2,17 +2,76 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Search, Sun, Moon, Sparkles, Menu, Zap, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Search,
+  Sun,
+  Moon,
+  Menu,
+  Zap,
+  ShieldCheck,
+  LayoutDashboard,
+  LogOut,
+  User as UserIcon,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { Badge } from "@/components/ui/badge";
+import { getAuthStatusAction, logoutAction } from "@/app/actions/auth.action";
 
 interface HeaderProps {
   onOpenSearch: () => void;
   onToggleSidebar?: () => void;
 }
 
+interface AuthUser {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  roleName?: string;
+}
+
 export function Header({ onOpenSearch, onToggleSidebar }: HeaderProps) {
   const { isDark, setTheme } = useTheme();
+  const router = useRouter();
+  const [user, setUser] = React.useState<AuthUser | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  const fetchAuth = React.useCallback(async () => {
+    try {
+      const res = await getAuthStatusAction();
+      if (res.isAuthenticated && res.user) {
+        setUser(res.user);
+      } else {
+        setUser(null);
+      }
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchAuth();
+
+    const handleAuthChange = () => {
+      fetchAuth();
+    };
+
+    window.addEventListener("omni:auth-changed", handleAuthChange);
+    return () => window.removeEventListener("omni:auth-changed", handleAuthChange);
+  }, [fetchAuth]);
+
+  const handleLogout = async () => {
+    await logoutAction();
+    setUser(null);
+    window.dispatchEvent(new CustomEvent("omni:auth-changed"));
+    router.push("/");
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-background/85 backdrop-blur-md">
@@ -38,7 +97,7 @@ export function Header({ onOpenSearch, onToggleSidebar }: HeaderProps) {
                   omni<span className="text-primary font-black">.tools</span>
                 </span>
                 <Badge variant="success" className="text-[10px] px-1.5 py-0 hidden sm:inline-flex">
-                  Client-side
+                  Guest-Ready
                 </Badge>
               </div>
             </div>
@@ -63,7 +122,7 @@ export function Header({ onOpenSearch, onToggleSidebar }: HeaderProps) {
           </button>
         </div>
 
-        {/* Right: Quick Actions & Theme Toggle */}
+        {/* Right: Quick Actions, Auth State & Theme Toggle */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -74,28 +133,68 @@ export function Header({ onOpenSearch, onToggleSidebar }: HeaderProps) {
             <Search className="h-5 w-5" />
           </button>
 
-          <Link
-            href="/finance/interest-rate"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/15 border border-primary/20 px-3 py-2 rounded-xl transition-all"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span>Lãi kép</span>
-          </Link>
+          {!loading && (
+            <>
+              {user ? (
+                // Authenticated State
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground bg-card hover:bg-muted border border-border px-3 py-2 rounded-xl transition-all"
+                  >
+                    <LayoutDashboard className="h-3.5 w-3.5 text-primary" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Link>
 
-          <Link
-            href="/finance/bill-split"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 hover:bg-muted border border-border px-3 py-2 rounded-xl transition-all"
-          >
-            <span>Chia bill</span>
-          </Link>
+                  {user.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <span>Admin</span>
+                    </Link>
+                  )}
 
-          <Link
-            href="/admin"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 px-3 py-2 rounded-xl transition-all"
-          >
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Admin</span>
-          </Link>
+                  <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-muted/40 border border-border text-xs">
+                    <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium truncate max-w-[110px]">{user.name || user.email.split("@")[0]}</span>
+                    <Badge variant={user.role === "admin" ? "danger" : user.role === "vip_member" ? "warning" : "default"} className="text-[10px] py-0 px-1 ml-0.5">
+                      {user.role === "admin" ? "Admin" : user.role === "vip_member" ? "VIP" : "Normal"}
+                    </Badge>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="Đăng xuất"
+                    className="p-2 rounded-xl border border-border bg-card hover:bg-red-500/10 hover:text-red-500 text-muted-foreground transition-all"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                // Guest State (No forced login)
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted border border-border px-3 py-2 rounded-xl transition-all"
+                  >
+                    <LogIn className="h-3.5 w-3.5" />
+                    <span>Đăng nhập</span>
+                  </Link>
+
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-3 py-2 rounded-xl shadow-sm transition-all"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>Đăng ký</span>
+                  </Link>
+                </div>
+              )}
+            </>
+          )}
 
           <button
             type="button"

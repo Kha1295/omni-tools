@@ -3,6 +3,7 @@
 import prisma from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { nanoid } from "nanoid";
+import { getCurrentUser } from "@/lib/auth";
 
 export interface SaveCalculationPayload {
   toolId: string;
@@ -36,8 +37,11 @@ export async function saveCalculationAction(
     // Sinh slug ngắn gọn 9 ký tự an toàn URL
     const slug = nanoid(9);
 
+    const user = await getCurrentUser();
+
     const record = await prisma.savedCalculation.create({
       data: {
+        userId: user ? user.id : null,
         toolId,
         title: title.slice(0, 150),
         inputData: inputData as Prisma.InputJsonValue,

@@ -38,6 +38,10 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 import { ShareCalculationModal } from "./ShareCalculationModal";
+import { ToolGuestHistoryWidget } from "./ToolGuestHistoryWidget";
+import { saveGuestHistoryItem } from "@/lib/guestHistory";
+import { logToolUsageAction, toggleBookmark, getUserBookmarks } from "@/app/actions/user.action";
+import { Save, Bookmark } from "lucide-react";
 
 interface ToolLayoutTemplateProps {
   tool: ToolMetadata;
@@ -67,6 +71,56 @@ export function ToolLayoutTemplate({
     inputData: {},
     resultData: {},
   });
+
+  const [isBookmarked, setIsBookmarked] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    getUserBookmarks().then((bms) => {
+      if (bms && bms.some((b: { toolId: string }) => b.toolId === tool.id)) {
+        setIsBookmarked(true);
+      }
+    });
+  }, [tool.id]);
+
+  const handleToggleBookmark = async () => {
+    const res = await toggleBookmark(tool.id, tool.name);
+    if (res.success && typeof res.isBookmarked === "boolean") {
+      setIsBookmarked(res.isBookmarked);
+    }
+  };
+
+  const handleSaveToHistory = async () => {
+    if (!onShareData) return;
+    setIsSaving(true);
+    try {
+      const data = onShareData();
+      const res = await logToolUsageAction({
+        toolId: tool.id,
+        title: data.title || tool.name,
+        inputData: data.inputData,
+        resultData: data.resultData,
+      });
+
+      if (res.isGuest) {
+        saveGuestHistoryItem({
+          toolId: tool.id,
+          title: data.title || tool.name,
+          inputData: data.inputData,
+          resultData: data.resultData,
+        });
+        setSaveStatus("Đã lưu máy");
+      } else {
+        setSaveStatus("Đã lưu Cloud");
+      }
+      setTimeout(() => setSaveStatus(null), 2500);
+    } catch (err) {
+      console.error("Lưu lịch sử lỗi:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleShare = () => {
     if (onShareData) {
@@ -175,7 +229,7 @@ export function ToolLayoutTemplate({
         </div>
 
         {/* Quick Toolbar Actions */}
-        <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+        <div className="flex flex-wrap items-center gap-2 self-end md:self-center shrink-0">
           {onReset && (
             <Button
               variant="outline"
@@ -187,6 +241,46 @@ export function ToolLayoutTemplate({
               <span>Đặt lại</span>
             </Button>
           )}
+
+          {onShareData && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveToHistory}
+              disabled={isSaving}
+              className="gap-1.5 text-xs rounded-xl"
+            >
+              {saveStatus ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-emerald-500 font-medium">{saveStatus}</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>{isSaving ? "Đang lưu..." : "Lưu kết quả"}</span>
+                </>
+              )}
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleBookmark}
+            className={`gap-1.5 text-xs rounded-xl ${
+              isBookmarked ? "text-amber-500 border-amber-500/30 bg-amber-500/10 font-semibold" : ""
+            }`}
+            title={isBookmarked ? "Bỏ ghim khỏi Dashboard" : "Ghim vào Dashboard"}
+          >
+            <Bookmark
+              className={`h-3.5 w-3.5 ${
+                isBookmarked ? "fill-amber-500 text-amber-500" : "text-muted-foreground"
+              }`}
+            />
+            <span className="hidden sm:inline">{isBookmarked ? "Đã ghim" : "Ghim"}</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -210,6 +304,9 @@ export function ToolLayoutTemplate({
 
       {/* Main Interactive Tool Body (Input + Result + Charts) */}
       <div className="min-h-[400px]">{children}</div>
+
+      {/* Guest & User Recent Tool Calculation Widget */}
+      <ToolGuestHistoryWidget toolId={tool.id} />
 
       {/* Formula & How It Works Section */}
       {tool.formulaContent && (
