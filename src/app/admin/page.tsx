@@ -708,7 +708,7 @@ export default function AdminDashboardPage() {
                       <td className="p-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
                           <Link
-                            href={`/share/${record.shareSlug}`}
+                            href={`/share?s=${record.shareSlug}`}
                             target="_blank"
                             className="p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground"
                             title="Mở liên kết chia sẻ"

@@ -54,7 +54,7 @@ export async function saveCalculationAction(
       success: true,
       id: record.id,
       shareSlug: record.shareSlug,
-      shareUrl: `/share/${record.shareSlug}`,
+      shareUrl: `/share?s=${record.shareSlug}`,
     };
   } catch (error: unknown) {
     console.error("Lỗi khi lưu kết quả tính toán:", error);

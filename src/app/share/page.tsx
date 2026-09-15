@@ -1,3 +1,8 @@
+"use client";
+
+import * as React from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getCalculationBySlug } from "@/app/actions/calculations.action";
 import { TOOLS_CONFIG } from "@/config/tools.config";
@@ -17,14 +22,9 @@ import {
   ArrowLeftRight,
   TrendingUp,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { CopyButton } from "./CopyButton";
-
-interface SharePageProps {
-  params: Promise<{
-    slug: string;
-  }>;
-}
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   "loan-calculator": <Calculator className="h-6 w-6 text-indigo-500" />,
@@ -33,9 +33,50 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   "currency-converter": <ArrowLeftRight className="h-6 w-6 text-blue-500" />,
 };
 
-export default async function SharedCalculationPage({ params }: SharePageProps) {
-  const { slug } = await params;
-  const calculation = await getCalculationBySlug(slug);
+interface CalculationData {
+  id: string;
+  toolId: string;
+  title: string;
+  inputData: Record<string, unknown>;
+  resultData: Record<string, unknown>;
+  shareSlug: string;
+  isStarred: boolean;
+  viewCount: number;
+  dataSizeBytes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function SharedCalculationContent() {
+  const searchParams = useSearchParams();
+  const slug = searchParams.get("slug") || searchParams.get("s") || "";
+  const [calculation, setCalculation] = React.useState<CalculationData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (slug) {
+      setLoading(true);
+      getCalculationBySlug(slug)
+        .then((data) => {
+          setCalculation(data);
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto py-24 px-4 text-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+        <p className="text-sm text-muted-foreground">Đang tải snapshot tính toán...</p>
+      </div>
+    );
+  }
 
   if (!calculation) {
     return (
@@ -317,3 +358,17 @@ export default async function SharedCalculationPage({ params }: SharePageProps) 
   );
 }
 
+export default function SharedCalculationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-2xl mx-auto py-24 px-4 text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-sm text-muted-foreground">Đang tải snapshot tính toán...</p>
+        </div>
+      }
+    >
+      <SharedCalculationContent />
+    </Suspense>
+  );
+}
