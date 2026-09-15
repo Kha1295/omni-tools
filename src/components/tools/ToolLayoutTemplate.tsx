@@ -37,21 +37,43 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Landmark: <Landmark className="h-6 w-6 text-indigo-500" />,
 };
 
+import { ShareCalculationModal } from "./ShareCalculationModal";
+
 interface ToolLayoutTemplateProps {
   tool: ToolMetadata;
   children: React.ReactNode; // Interactive Calculator Body
   onReset?: () => void;
+  onShareData?: () => {
+    title: string;
+    inputData: Record<string, unknown>;
+    resultData: Record<string, unknown>;
+  };
 }
 
 export function ToolLayoutTemplate({
   tool,
   children,
   onReset,
+  onShareData,
 }: ToolLayoutTemplateProps) {
   const [copied, setCopied] = React.useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
+  const [modalSharePayload, setModalSharePayload] = React.useState<{
+    title: string;
+    inputData: Record<string, unknown>;
+    resultData: Record<string, unknown>;
+  }>({
+    title: "",
+    inputData: {},
+    resultData: {},
+  });
 
   const handleShare = () => {
-    if (typeof window !== "undefined") {
+    if (onShareData) {
+      const data = onShareData();
+      setModalSharePayload(data);
+      setIsShareModalOpen(true);
+    } else if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -239,6 +261,16 @@ export function ToolLayoutTemplate({
           </Accordion>
         </div>
       )}
+
+      {/* Modal Lưu và Chia Sẻ */}
+      <ShareCalculationModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        toolId={tool.id}
+        defaultTitle={modalSharePayload.title || tool.name}
+        inputData={modalSharePayload.inputData}
+        resultData={modalSharePayload.resultData}
+      />
     </div>
   );
 }

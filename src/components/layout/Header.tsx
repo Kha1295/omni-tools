@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Search, Sun, Moon, Sparkles, Menu, Zap } from "lucide-react";
+import { Search, Sun, Moon, Sparkles, Menu, Zap, ShieldCheck } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { Badge } from "@/components/ui/badge";
 
@@ -87,6 +87,14 @@ export function Header({ onOpenSearch, onToggleSidebar }: HeaderProps) {
             className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 hover:bg-muted border border-border px-3 py-2 rounded-xl transition-all"
           >
             <span>Chia bill</span>
+          </Link>
+
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 px-3 py-2 rounded-xl transition-all"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>Admin</span>
           </Link>
 
           <button

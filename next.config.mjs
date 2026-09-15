@@ -1,10 +1,14 @@
-const isGithubActions = process.env.GITHUB_ACTIONS === "true" || process.env.DEPLOY_TARGET === "gh-pages";
+const isStaticExport = process.env.STATIC_EXPORT === "true" || process.env.DEPLOY_TARGET === "gh-pages";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
-  basePath: isGithubActions ? "/omni-tools" : "",
-  assetPrefix: isGithubActions ? "/omni-tools" : undefined,
+  ...(isStaticExport
+    ? {
+        output: "export",
+        basePath: "/omni-tools",
+        assetPrefix: "/omni-tools",
+      }
+    : {}),
   trailingSlash: true,
   images: {
     unoptimized: true,

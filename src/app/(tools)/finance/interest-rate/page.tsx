@@ -106,8 +106,39 @@ export default function InterestRatePage() {
       ? ((result.totalInterest / result.totalPrincipal) * 100).toFixed(1)
       : "0";
 
+  const handleShareData = React.useCallback(() => {
+    return {
+      title: `Kế hoạch lãi kép ${formatCurrency(initialPrincipal)} (${annualInterestRate}%/năm trong ${durationYears} năm)`,
+      inputData: {
+        initialPrincipal,
+        annualInterestRate,
+        durationYears,
+        compoundFrequency,
+        periodicContribution,
+        contributionFrequency,
+      },
+      resultData: {
+        finalBalance: result.finalBalance,
+        totalPrincipal: result.totalPrincipal,
+        totalInterest: result.totalInterest,
+      },
+    };
+  }, [
+    initialPrincipal,
+    annualInterestRate,
+    durationYears,
+    compoundFrequency,
+    periodicContribution,
+    contributionFrequency,
+    result,
+  ]);
+
   return (
-    <ToolLayoutTemplate tool={toolMetadata} onReset={handleReset}>
+    <ToolLayoutTemplate
+      tool={toolMetadata}
+      onReset={handleReset}
+      onShareData={handleShareData}
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Input Form Controls */}
         <div className="lg:col-span-5 space-y-6">

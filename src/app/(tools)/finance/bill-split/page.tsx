@@ -185,8 +185,48 @@ export default function BillSplitPage() {
           : []),
       ];
 
+  const handleShareData = React.useCallback(() => {
+    const totalCount = splitMode === "equal" ? numberOfPeople : peopleShares.length;
+    return {
+      title: `Chia tiền hóa đơn ${formatCurrency(result.totalAmount)} cho ${totalCount} người`,
+      inputData: {
+        splitMode,
+        subtotal,
+        numberOfPeople,
+        taxPercent,
+        tipPercent,
+        serviceChargePercent,
+        roundingStep,
+        peopleShares: splitMode === "shares" ? peopleShares : undefined,
+      },
+      resultData: {
+        totalAmount: result.totalAmount,
+        perPersonAmount: result.roundedPerPersonTotal || result.perPersonTotal,
+        subtotal: result.subtotal,
+        taxAmount: result.taxAmount,
+        tipAmount: result.tipAmount,
+        serviceChargeAmount: result.serviceChargeAmount,
+        personDetails: result.personDetails,
+      },
+    };
+  }, [
+    splitMode,
+    subtotal,
+    numberOfPeople,
+    taxPercent,
+    tipPercent,
+    serviceChargePercent,
+    roundingStep,
+    peopleShares,
+    result,
+  ]);
+
   return (
-    <ToolLayoutTemplate tool={toolMetadata} onReset={handleReset}>
+    <ToolLayoutTemplate
+      tool={toolMetadata}
+      onReset={handleReset}
+      onShareData={handleShareData}
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Input Form & Mode Switcher */}
         <div className="lg:col-span-6 space-y-6">

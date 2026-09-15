@@ -157,8 +157,71 @@ export default function LoanCalculatorPage() {
     }));
   }, [calcMode, loanResult.schedule, reverseResult.schedule]);
 
+  const handleShareData = React.useCallback(() => {
+    if (calcMode === "forward") {
+      return {
+        title: `Phương án vay ${formatCurrency(principal)} - ${method === "reducing_balance" ? "Dư nợ giảm dần" : "Dư nợ gốc"} (${annualInterestRate}%/năm)`,
+        inputData: {
+          calcMode,
+          principal,
+          annualInterestRate,
+          termYears,
+          termType,
+          termMonthsInput,
+          method,
+          gracePeriodMonths,
+        },
+        resultData: {
+          totalInterest: loanResult.totalInterest,
+          totalPayment: loanResult.totalPayment,
+          firstMonthPayment: loanResult.firstMonthPayment,
+          maxMonthlyPayment: loanResult.maxMonthlyPayment,
+          minMonthlyPayment: loanResult.minMonthlyPayment,
+        },
+      };
+    } else {
+      return {
+        title: `Tra cứu lãi suất vay ${formatCurrency(revPrincipal)} (${revTermMonths} tháng)`,
+        inputData: {
+          calcMode,
+          revPrincipal,
+          revTermMonths,
+          revInputType,
+          revMonthlyPayment,
+          revTotalPayment,
+        },
+        resultData: {
+          annualRateReducing: reverseResult.annualRateReducing,
+          annualRateFlat: reverseResult.annualRateFlat,
+          totalInterest: reverseResult.totalInterest,
+          totalPayment: reverseResult.totalPayment,
+        },
+      };
+    }
+  }, [
+    calcMode,
+    principal,
+    annualInterestRate,
+    termYears,
+    termType,
+    termMonthsInput,
+    method,
+    gracePeriodMonths,
+    loanResult,
+    revPrincipal,
+    revTermMonths,
+    revInputType,
+    revMonthlyPayment,
+    revTotalPayment,
+    reverseResult,
+  ]);
+
   return (
-    <ToolLayoutTemplate tool={toolMetadata} onReset={handleReset}>
+    <ToolLayoutTemplate
+      tool={toolMetadata}
+      onReset={handleReset}
+      onShareData={handleShareData}
+    >
       <div className="space-y-6">
         {/* Top Feature Mode Switcher */}
         <div className="flex items-center justify-center">

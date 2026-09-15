@@ -47,8 +47,27 @@ export default function CurrencyConverterPage() {
   // Common benchmark amounts
   const benchmarkAmounts = [1, 5, 10, 50, 100, 500, 1000];
 
+  const handleShareData = React.useCallback(() => {
+    return {
+      title: `Quy đổi ${formatNumber(amount)} ${fromCurrency} sang ${toCurrency}`,
+      inputData: {
+        amount,
+        fromCurrency,
+        toCurrency,
+      },
+      resultData: {
+        result,
+        rate,
+      },
+    };
+  }, [amount, fromCurrency, toCurrency, result, rate]);
+
   return (
-    <ToolLayoutTemplate tool={toolMetadata} onReset={handleReset}>
+    <ToolLayoutTemplate
+      tool={toolMetadata}
+      onReset={handleReset}
+      onShareData={handleShareData}
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Interactive Converter Card */}
         <div className="lg:col-span-7 space-y-6">
