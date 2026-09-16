@@ -6,10 +6,9 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getCalculationBySlug } from "@/app/actions/calculations.action";
 import { TOOLS_CONFIG } from "@/config/tools.config";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatNumber } from "@/lib/utils";
 import {
   Sparkles,
   ArrowLeft,
@@ -23,8 +22,13 @@ import {
   TrendingUp,
   CheckCircle2,
   Loader2,
+  Share2,
 } from "lucide-react";
 import { CopyButton } from "./CopyButton";
+import { SharedLoanVisualizer } from "@/components/share/SharedLoanVisualizer";
+import { SharedBillSplitVisualizer } from "@/components/share/SharedBillSplitVisualizer";
+import { SharedInterestVisualizer } from "@/components/share/SharedInterestVisualizer";
+import { SharedCurrencyVisualizer } from "@/components/share/SharedCurrencyVisualizer";
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   "loan-calculator": <Calculator className="h-6 w-6 text-indigo-500" />,
@@ -113,12 +117,9 @@ function SharedCalculationContent() {
     minute: "2-digit",
   });
 
-  const num = (v: unknown): number => (typeof v === "number" ? v : Number(v) || 0);
-  const str = (v: unknown): string => (typeof v === "string" ? v : String(v ?? ""));
-
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
-      {/* Top Breadcrumb */}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fade-in">
+      {/* Top Breadcrumb & Actions */}
       <div className="flex items-center justify-between gap-4">
         <Link
           href={toolSlug}
@@ -139,8 +140,33 @@ function SharedCalculationContent() {
         </div>
       </div>
 
+      {/* Shared Calculation Notice Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 text-indigo-950 dark:text-indigo-200 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-xl text-indigo-600 dark:text-indigo-400 shrink-0">
+            <Share2 className="h-5 w-5" />
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-sm font-bold text-foreground">
+              Bạn đang xem kết quả được chia sẻ từ một phiên tính toán
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Tất cả thông số đầu vào, biểu đồ và kết quả chi tiết đã được phục hồi đầy đủ. Bạn có thể mở công cụ để thử các kịch bản mới.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+          <Link href={toolSlug}>
+            <Button size="sm" className="gap-1.5 text-xs font-semibold shadow-sm">
+              <span>Thử kịch bản mới</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       {/* Hero Header Card */}
-      <Card className="border-border/80 bg-card/70 backdrop-blur-md shadow-lg overflow-hidden">
+      <Card className="border-border/80 bg-card/70 backdrop-blur-md shadow-md overflow-hidden">
         <div className="p-6 sm:p-8 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -181,168 +207,23 @@ function SharedCalculationContent() {
         </div>
       </Card>
 
-      {/* Snapshot Content based on Tool Type */}
+      {/* Tool-Specific Visualizer */}
       <div className="space-y-6">
-        {/* LOAN CALCULATOR SNAPSHOT */}
         {calculation.toolId === "loan-calculator" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Số tiền vay gốc</p>
-                <p className="text-lg font-bold text-foreground mt-1">
-                  {formatCurrency(num(inputData.principal))}
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Lãi suất năm</p>
-                <p className="text-lg font-bold text-indigo-500 mt-1">
-                  {num(inputData.annualInterestRate)}%/năm
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Thời hạn vay</p>
-                <p className="text-lg font-bold text-foreground mt-1">
-                  {inputData.termYears ? `${num(inputData.termYears)} năm` : `${num(inputData.termMonthsInput)} tháng`}
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Phương thức tính</p>
-                <p className="text-sm font-bold text-foreground mt-1">
-                  {str(inputData.method) === "reducing_balance" ? "Dư nợ giảm dần" : "Dư nợ gốc"}
-                </p>
-              </Card>
-            </div>
-
-            {resultData && (
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle className="text-base font-bold">Kết Quả Tính Toán Đã Lưu</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Tổng tiền lãi phải trả</p>
-                      <p className="text-lg font-extrabold text-primary mt-1">
-                        {formatCurrency(num(resultData.totalInterest))}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Tổng số tiền gốc + lãi</p>
-                      <p className="text-lg font-extrabold text-foreground mt-1">
-                        {formatCurrency(num(resultData.totalPayment))}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Tháng đầu trả cao nhất</p>
-                      <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                        {formatCurrency(num(resultData.firstMonthPayment || resultData.maxMonthlyPayment))}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          <SharedLoanVisualizer inputData={inputData} resultData={resultData} />
         )}
 
-        {/* BILL SPLIT SNAPSHOT */}
         {calculation.toolId === "bill-split" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Tiền món trước thuế</p>
-                <p className="text-lg font-bold text-foreground mt-1">
-                  {formatCurrency(num(inputData.subtotal))}
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Số người chia</p>
-                <p className="text-lg font-bold text-indigo-500 mt-1">
-                  {num(inputData.numberOfPeople || inputData.numPeople || 1)} người
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Mỗi người thanh toán</p>
-                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                  {formatCurrency(num(resultData.perPersonAmount || resultData.roundedPerPersonTotal))}
-                </p>
-              </Card>
-            </div>
-          </div>
+          <SharedBillSplitVisualizer inputData={inputData} resultData={resultData} />
         )}
 
-        {/* INTEREST RATE SNAPSHOT */}
         {calculation.toolId === "interest-rate" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Tiền gốc ban đầu</p>
-                <p className="text-lg font-bold text-foreground mt-1">
-                  {formatCurrency(num(inputData.initialPrincipal || inputData.initialAmount))}
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Lãi suất gửi</p>
-                <p className="text-lg font-bold text-emerald-500 mt-1">
-                  {num(inputData.annualInterestRate || inputData.annualRate)}%/năm
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Thời gian tích lũy</p>
-                <p className="text-lg font-bold text-foreground mt-1">
-                  {num(inputData.durationYears || inputData.years)} năm
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Tổng tài sản đạt được</p>
-                <p className="text-lg font-bold text-primary mt-1">
-                  {formatCurrency(num(resultData.finalBalance))}
-                </p>
-              </Card>
-            </div>
-          </div>
+          <SharedInterestVisualizer inputData={inputData} resultData={resultData} />
         )}
 
-        {/* CURRENCY CONVERTER SNAPSHOT */}
         {calculation.toolId === "currency-converter" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Số tiền nguồn</p>
-                <p className="text-lg font-bold text-foreground mt-1">
-                  {formatNumber(num(inputData.amount))} {str(inputData.fromCurrency)}
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Tỷ giá áp dụng</p>
-                <p className="text-lg font-bold text-indigo-500 mt-1">
-                  1 {str(inputData.fromCurrency)} = {formatNumber(num(resultData.rate))} {str(inputData.toCurrency)}
-                </p>
-              </Card>
-              <Card className="p-4 bg-muted/40 border-border">
-                <p className="text-xs text-muted-foreground">Quy đổi thành</p>
-                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                  {formatNumber(num(resultData.result))} {str(inputData.toCurrency)}
-                </p>
-              </Card>
-            </div>
-          </div>
+          <SharedCurrencyVisualizer inputData={inputData} resultData={resultData} />
         )}
-
-        {/* Raw Snapshot Details Card */}
-        <Card className="border-border/80 bg-card/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Database className="h-4 w-4 text-muted-foreground" />
-              <span>Chi Tiết Dữ Liệu Lưu Trữ (JSON Snapshot)</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="p-3.5 rounded-xl bg-muted/50 border border-border/60 text-xs font-mono overflow-x-auto max-h-60">
-              <pre>{JSON.stringify({ inputData, resultData }, null, 2)}</pre>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Bottom CTA */}
