@@ -173,6 +173,19 @@ model ExchangeRate {
   updatedAt    DateTime @updatedAt
 }
 
+model UsdRateHistory {
+  id        String   @id @default(cuid())
+  date      String   // Định dạng "YYYY-MM-DD"
+  currency  String   @db.VarChar(3) // "VND", "EUR", "JPY", "GBP", etc.
+  rate      Decimal  @db.Decimal(18, 6) // 1 USD = rate Currency
+  createdAt DateTime @default(now())
+
+  @@unique([date, currency])
+  @@index([date])
+  @@index([currency])
+  @@map("usd_rates_history")
+}
+
 model BankRate {
   id          String   @id @default(cuid())
   bankCode    String   // "VCB", "BIDV", "TCB", "MBB", etc.
