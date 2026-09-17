@@ -16,3 +16,4 @@ export async function POST() {
     status: result.success ? 200 : 500,
   });
 }
+

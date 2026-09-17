@@ -19,6 +19,7 @@ import {
   Receipt,
   ShieldCheck,
   Landmark,
+  Video,
 } from "lucide-react";
 import { ToolMetadata } from "@/config/tools.config";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   TrendingUp: <TrendingUp className="h-6 w-6 text-emerald-500" />,
   Receipt: <Receipt className="h-6 w-6 text-teal-500" />,
   Landmark: <Landmark className="h-6 w-6 text-indigo-500" />,
+  Video: <Video className="h-6 w-6 text-rose-500" />,
 };
 
 import { ShareCalculationModal } from "./ShareCalculationModal";

@@ -38,3 +38,4 @@ describe("Currency Cross-Rate and Time-Series Math", () => {
     expect(declinePercent).toBe(-2.0);
   });
 });
+

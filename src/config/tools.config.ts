@@ -7,7 +7,7 @@ export interface ToolMetadata {
   id: string;
   name: string;
   slug: string;
-  category: "finance" | "convert" | "dev" | "math" | "text";
+  category: "finance" | "convert" | "dev" | "math" | "text" | "media";
   categoryName: string;
   shortDesc: string;
   fullDesc: string;
@@ -29,7 +29,7 @@ export interface ToolMetadata {
 }
 
 export interface CategoryMetadata {
-  id: "finance" | "convert" | "dev" | "math" | "text";
+  id: "finance" | "convert" | "dev" | "math" | "text" | "media";
   name: string;
   description: string;
   icon: string;
@@ -71,6 +71,13 @@ export const CATEGORIES: CategoryMetadata[] = [
     description: "Đếm từ, chuyển đổi chữ hoa/thường, xóa ký tự thừa, diff text",
     icon: "FileText",
     color: "from-rose-500 to-pink-700",
+  },
+  {
+    id: "media",
+    name: "Media & Mạng Xã Hội",
+    description: "Tải video, reels, bài post chất lượng cao từ Facebook, X (Twitter), Threads",
+    icon: "Video",
+    color: "from-rose-500 to-red-700",
   },
 ];
 
@@ -233,6 +240,53 @@ export const TOOLS_CONFIG: ToolMetadata[] = [
       title: "Chuyển Đổi Ngoại Tệ & Tỷ Giá Tiền Tệ Online | Omni Tools",
       description: "Quy đổi tỷ giá USD, EUR, JPY, KRW sang VND và ngược lại chính xác tức thì. Bảng tra cứu tỷ giá ngoại tệ tiện lợi.",
       keywords: ["chuyển đổi tiền tệ", "tỷ giá usd vnd", "đổi ngoại tệ", "currency converter"]
+    }
+  },
+  {
+    id: "social-video-downloader",
+    name: "Tải Video Facebook, X & Threads",
+    slug: "/media/video-downloader",
+    category: "media",
+    categoryName: "Media & Mạng Xã Hội",
+    shortDesc: "Tải video, reels, clip chất lượng cao HD/SD từ Facebook, X (Twitter) và Threads dễ dàng",
+    fullDesc: "Công cụ tải video trực tuyến hỗ trợ Facebook (Video, Reels, Watch), X (Twitter) và Threads. Cho phép xem trước, chọn chất lượng tải về từ SD đến Full HD 1080p và tải trực tiếp về thiết bị nhanh chóng, an toàn.",
+    icon: "Video",
+    badge: "Mới & Hot",
+    isPopular: true,
+    isNew: true,
+    tags: ["Tải video Facebook", "Tải video Twitter", "Tải video X", "Tải video Threads", "Download FB Reel", "Video downloader", "Save video MP4"],
+    features: [
+      "Hỗ trợ cả 3 nền tảng mạng xã hội phổ biến: Facebook, X (Twitter) và Threads",
+      "Tự động nhận diện nền tảng khi dán link bài viết hoặc video",
+      "Trích xuất nhiều tùy chọn chất lượng: HD (1080p/720p), SD (480p/360p) và Audio",
+      "Xem trước video và tiêu đề/caption bài viết trước khi tải",
+      "Nút tải trực tiếp về máy (bảo toàn định dạng MP4, không mở tab xem rườm rà)"
+    ],
+    formulaTitle: "Hướng Dẫn Tải Video Mạng Xã Hội",
+    formulaContent: "Bước 1: Sao chép link bài viết hoặc video trên Facebook, X hoặc Threads. Bước 2: Dán vào ô nhập link bên dưới. Bước 3: Bấm 'Lấy link tải'. Bước 4: Chọn chất lượng HD hoặc SD và bấm 'Tải Video'.",
+    formulaExample: "Ví dụ: Dán link https://www.facebook.com/watch?v=... hoặc https://x.com/user/status/... hoặc https://www.threads.net/@user/post/... rồi bấm Lấy link tải để tải video MP4 về máy.",
+    faqs: [
+      {
+        question: "Công cụ có hỗ trợ tải video từ nhóm kín hoặc tài khoản riêng tư (Private) không?",
+        answer: "Công cụ chỉ hỗ trợ tải các video được đăng ở chế độ Công khai (Public). Các video trong nhóm kín, tài khoản riêng tư hoặc yêu cầu đăng nhập mật khẩu sẽ không thể trích xuất do chính sách bảo mật của các nền tảng."
+      },
+      {
+        question: "Video tải về được lưu ở đâu trên điện thoại hoặc máy tính?",
+        answer: "Trên máy tính, file tải về thường nằm trong thư mục 'Downloads' (hoặc 'Tải về'). Trên điện thoại iPhone/Android, file sẽ lưu trong ứng dụng Tệp (Files) hoặc thư viện ảnh/video của bạn."
+      },
+      {
+        question: "Tại sao bấm nút tải mà video lại mở ở tab mới thay vì tải về máy?",
+        answer: "Omni-tools đã trang bị máy chủ tải luồng trực tiếp (Stream Proxy Attachment). Khi bạn bấm 'Tải Video', file sẽ được tự động kích hoạt tải trực tiếp về máy thay vì mở tab xem."
+      },
+      {
+        question: "Công cụ có thu thập hay lưu trữ video của tôi không?",
+        answer: "Hoàn toàn không! Hệ thống chỉ hỗ trợ chuyển tiếp luồng dữ liệu trích xuất từ nguồn công khai về thiết bị của bạn. Không lưu trữ bất kỳ bản sao video nào trên máy chủ."
+      }
+    ],
+    seo: {
+      title: "Tải Video Facebook, X (Twitter) & Threads Online Miễn Phí | Omni Tools",
+      description: "Công cụ download video Facebook (Reels, Watch), X / Twitter và Threads chất lượng cao Full HD / SD MP4. Tải trực tiếp về điện thoại và máy tính miễn phí.",
+      keywords: ["tải video facebook", "download video fb", "tải video x", "tải video twitter", "tải video threads", "download threads video", "lấy link video facebook", "save video fb"]
     }
   }
 ];
