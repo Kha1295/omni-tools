@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { syncDailyRates } from "@/lib/services/currencySync";
+import { checkAndSyncRatesIfNeeded } from "@/lib/services/currencySync";
 
 export const dynamic = "force-dynamic";
 
@@ -53,15 +53,18 @@ export async function GET(request: NextRequest) {
     if (from !== "USD") currenciesToQuery.push(from);
     if (to !== "USD" && to !== from) currenciesToQuery.push(to);
 
-    // Check if today's sync is needed (cache-aside)
+    // Check if today's sync is needed and ensure synced
     const todayCheck = await prisma.usdRateHistory.findFirst({
       where: { date: todayStr },
       select: { id: true },
     });
 
     if (!todayCheck) {
-      // Trigger background sync without awaiting to keep response fast
-      syncDailyRates().catch((e) => console.error("Auto background sync failed:", e));
+      try {
+        await checkAndSyncRatesIfNeeded();
+      } catch (e) {
+        console.error("Auto sync failed, falling back to existing records:", e);
+      }
     }
 
     // Query database for rates in date range

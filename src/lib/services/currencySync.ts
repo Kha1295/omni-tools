@@ -1,4 +1,4 @@
-import prisma from "@/lib/db";
+import prisma from "../db";
 
 interface ExchangeRateApiResponse {
   result: string;
@@ -83,20 +83,6 @@ export async function syncDailyRates(): Promise<SyncResult> {
       }
 
       // Also update the legacy ExchangeRate table for popular currencies
-      const POPULAR_CURRENCIES_INFO: Record<string, { name: string; symbol: string }> = {
-        VND: { name: "Việt Nam Đồng", symbol: "₫" },
-        USD: { name: "Đô la Mỹ", symbol: "$" },
-        EUR: { name: "Euro", symbol: "€" },
-        JPY: { name: "Yên Nhật", symbol: "¥" },
-        GBP: { name: "Bảng Anh", symbol: "£" },
-        AUD: { name: "Đô la Úc", symbol: "A$" },
-        CAD: { name: "Đô la Canada", symbol: "C$" },
-        SGD: { name: "Đô la Singapore", symbol: "S$" },
-        KRW: { name: "Won Hàn Quốc", symbol: "₩" },
-        CNY: { name: "Nhân dân tệ", symbol: "¥" },
-        THB: { name: "Baht Thái", symbol: "฿" },
-      };
-
       for (const [code, info] of Object.entries(POPULAR_CURRENCIES_INFO)) {
         const rateToUSD = code === "USD" ? 1 : rates[code] ? 1 / rates[code] : undefined;
         if (rateToUSD !== undefined) {
@@ -136,3 +122,149 @@ export async function syncDailyRates(): Promise<SyncResult> {
   }
 }
 
+export const POPULAR_CURRENCIES_INFO: Record<string, { name: string; symbol: string }> = {
+  USD: { name: "Đô la Mỹ", symbol: "$" },
+  VND: { name: "Việt Nam Đồng", symbol: "₫" },
+  EUR: { name: "Euro", symbol: "€" },
+  JPY: { name: "Yên Nhật", symbol: "¥" },
+  GBP: { name: "Bảng Anh", symbol: "£" },
+  AUD: { name: "Đô la Úc", symbol: "A$" },
+  CAD: { name: "Đô la Canada", symbol: "C$" },
+  SGD: { name: "Đô la Singapore", symbol: "S$" },
+  KRW: { name: "Won Hàn Quốc", symbol: "₩" },
+  CNY: { name: "Nhân dân tệ", symbol: "¥" },
+  THB: { name: "Baht Thái", symbol: "฿" },
+};
+
+export interface CheckSyncResult {
+  synced: boolean;
+  justSynced: boolean;
+  date: string;
+  count: number;
+  message: string;
+}
+
+/**
+ * Checks whether today's rates have already been synced into usd_rates_history.
+ * If not present (or forced), executes syncDailyRates() to sync latest rates.
+ */
+export async function checkAndSyncRatesIfNeeded(force = false): Promise<CheckSyncResult> {
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  if (!force) {
+    const todayCount = await prisma.usdRateHistory.count({
+      where: { date: todayStr },
+    });
+
+    if (todayCount > 0) {
+      return {
+        synced: true,
+        justSynced: false,
+        date: todayStr,
+        count: todayCount,
+        message: `Tỷ giá ngày ${todayStr} đã được đồng bộ trong cơ sở dữ liệu (${todayCount} đồng tiền).`,
+      };
+    }
+  }
+
+  // Need sync: call syncDailyRates()
+  const syncRes = await syncDailyRates();
+  return {
+    synced: syncRes.success,
+    justSynced: syncRes.success,
+    date: syncRes.date,
+    count: syncRes.count,
+    message: syncRes.message,
+  };
+}
+
+export interface LatestCurrencyRateItem {
+  code: string;
+  name: string;
+  symbol: string;
+  rateToUSD: number;   // 1 Unit = X USD (for converter logic)
+  rateFromUSD: number; // 1 USD = X Unit (e.g. 1 USD = 25,964 VND)
+}
+
+export interface LatestRatesResponse {
+  success: boolean;
+  latestDate: string;
+  syncedToday: boolean;
+  justSynced: boolean;
+  lastUpdated: string;
+  popularCurrencies: LatestCurrencyRateItem[];
+  allRates: Record<string, number>; // Currency code -> 1 USD = X Currency
+  message?: string;
+}
+
+/**
+ * Retrieves the latest currency rates from the database.
+ * Automatically checks and syncs today's rates if not yet synced.
+ */
+export async function getLatestCurrencyRates(forceSync = false): Promise<LatestRatesResponse> {
+  // 1. Check & Sync if needed
+  const syncStatus = await checkAndSyncRatesIfNeeded(forceSync);
+
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // 2. Find the latest date available in usdRateHistory
+  const latestRecord = await prisma.usdRateHistory.findFirst({
+    orderBy: { date: "desc" },
+    select: { date: true },
+  });
+
+  const latestDate = latestRecord?.date || todayStr;
+  const syncedToday = latestDate === todayStr && syncStatus.synced;
+
+  // 3. Fetch all rates for latestDate from usdRateHistory
+  const records = await prisma.usdRateHistory.findMany({
+    where: { date: latestDate },
+    select: { currency: true, rate: true },
+  });
+
+  const allRates: Record<string, number> = { USD: 1 };
+  records.forEach((r) => {
+    allRates[r.currency] = Number(r.rate);
+  });
+
+  // 4. Build popular currencies array
+  const popularCurrencies: LatestCurrencyRateItem[] = [];
+  for (const [code, info] of Object.entries(POPULAR_CURRENCIES_INFO)) {
+    if (code === "USD") {
+      popularCurrencies.push({
+        code: "USD",
+        name: info.name,
+        symbol: info.symbol,
+        rateToUSD: 1,
+        rateFromUSD: 1,
+      });
+    } else {
+      const rateFromUSD = allRates[code] || 1;
+      const rateToUSD = rateFromUSD > 0 ? Number((1 / rateFromUSD).toFixed(8)) : 1;
+      popularCurrencies.push({
+        code,
+        name: info.name,
+        symbol: info.symbol,
+        rateToUSD,
+        rateFromUSD,
+      });
+    }
+  }
+
+  // 5. Get last updated timestamp from ExchangeRate table or current time
+  const sampleExchangeRate = await prisma.exchangeRate.findFirst({
+    orderBy: { updatedAt: "desc" },
+    select: { updatedAt: true },
+  });
+
+  return {
+    success: true,
+    latestDate,
+    syncedToday,
+    justSynced: syncStatus.justSynced,
+    lastUpdated: sampleExchangeRate?.updatedAt.toISOString() || new Date().toISOString(),
+    popularCurrencies,
+    allRates,
+    message: syncStatus.message,
+  };
+}

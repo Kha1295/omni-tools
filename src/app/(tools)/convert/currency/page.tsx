@@ -22,6 +22,8 @@ import {
   Calendar,
   Loader2,
   LineChart as LineChartIcon,
+  RefreshCw,
+  CheckCircle2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -51,6 +53,34 @@ interface CurrencyHistoryResponse {
   chart: Array<{ date: string; rate: number }>;
 }
 
+interface LatestCurrencyRateItem {
+  code: string;
+  name: string;
+  symbol: string;
+  rateToUSD: number;
+  rateFromUSD: number;
+}
+
+interface LatestRatesResponse {
+  success: boolean;
+  latestDate: string;
+  syncedToday: boolean;
+  justSynced: boolean;
+  lastUpdated: string;
+  popularCurrencies: LatestCurrencyRateItem[];
+  allRates: Record<string, number>;
+  message?: string;
+}
+
+function formatDateDisplay(dateStr?: string): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+}
+
 export default function CurrencyConverterPage() {
   const [amount, setAmount] = React.useState<number>(100);
   const [fromCurrency, setFromCurrency] = React.useState<string>("USD");
@@ -59,6 +89,38 @@ export default function CurrencyConverterPage() {
 
   const [historyData, setHistoryData] = React.useState<CurrencyHistoryResponse | null>(null);
   const [loadingHistory, setLoadingHistory] = React.useState<boolean>(false);
+
+  // Latest rates from Database & auto-sync state
+  const [latestRates, setLatestRates] = React.useState<LatestRatesResponse | null>(null);
+  const [syncing, setSyncing] = React.useState<boolean>(false);
+  const [syncNotification, setSyncNotification] = React.useState<string | null>(null);
+
+  // Auto-sync function: checks if DB is synced for today; if not, triggers sync
+  const fetchLatestRates = React.useCallback(async (force = false) => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/currency/latest${force ? "?force=true" : ""}`);
+      const data: LatestRatesResponse = await res.json();
+      if (data.success) {
+        setLatestRates(data);
+        if (data.justSynced) {
+          setSyncNotification(
+            `Đã tự động đồng bộ tỷ giá mới nhất (${formatDateDisplay(data.latestDate)}) từ hệ thống liên ngân hàng!`
+          );
+          setTimeout(() => setSyncNotification(null), 5000);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check/sync latest currency rates:", err);
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
+  // Automatically check and sync on page access
+  React.useEffect(() => {
+    fetchLatestRates(false);
+  }, [fetchLatestRates]);
 
   // Fetch real-time rate & historical time-series
   React.useEffect(() => {
@@ -84,15 +146,33 @@ export default function CurrencyConverterPage() {
     return () => {
       isCancelled = true;
     };
-  }, [fromCurrency, toCurrency, range]);
+  }, [fromCurrency, toCurrency, range, latestRates?.latestDate]);
 
-  // Determine active rate: Use live DB/API rate if available, else static fallback
+  // Determine active rate:
+  // 1. Live historical rate for the pair if available
+  // 2. Cross-rate computed from latest DB records
+  // 3. Static fallback
   const activeRate = React.useMemo(() => {
     if (historyData?.currentRate && historyData.currentRate > 0) {
       return historyData.currentRate;
     }
+    if (latestRates?.allRates) {
+      const rate_USD_from = fromCurrency === "USD" ? 1 : latestRates.allRates[fromCurrency];
+      const rate_USD_to = toCurrency === "USD" ? 1 : latestRates.allRates[toCurrency];
+      if (rate_USD_from && rate_USD_to && rate_USD_from > 0) {
+        return Number((rate_USD_to / rate_USD_from).toFixed(6));
+      }
+    }
     return convertCurrency(1, fromCurrency, toCurrency).rate;
-  }, [historyData, fromCurrency, toCurrency]);
+  }, [historyData, latestRates, fromCurrency, toCurrency]);
+
+  // Dynamic currency list from latest database sync or static fallback
+  const currenciesList = React.useMemo(() => {
+    if (latestRates?.popularCurrencies && latestRates.popularCurrencies.length > 0) {
+      return latestRates.popularCurrencies;
+    }
+    return POPULAR_CURRENCIES;
+  }, [latestRates]);
 
   // Live conversion result
   const result = React.useMemo(() => {
@@ -111,13 +191,15 @@ export default function CurrencyConverterPage() {
     setRange("30d");
   };
 
-  const currencyOptions = POPULAR_CURRENCIES.map((c) => ({
-    value: c.code,
-    label: `${c.code} - ${c.name} (${c.symbol})`,
-  }));
+  const currencyOptions = React.useMemo(() => {
+    return currenciesList.map((c) => ({
+      value: c.code,
+      label: `${c.code} - ${c.name} (${c.symbol})`,
+    }));
+  }, [currenciesList]);
 
-  const fromInfo = POPULAR_CURRENCIES.find((c) => c.code === fromCurrency);
-  const toInfo = POPULAR_CURRENCIES.find((c) => c.code === toCurrency);
+  const fromInfo = currenciesList.find((c) => c.code === fromCurrency);
+  const toInfo = currenciesList.find((c) => c.code === toCurrency);
 
   // Common benchmark amounts
   const benchmarkAmounts = [1, 5, 10, 50, 100, 500, 1000];
@@ -177,6 +259,57 @@ export default function CurrencyConverterPage() {
       onShareData={handleShareData}
     >
       <div className="space-y-8">
+        {/* Sync Status Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-card border border-border/70 shadow-sm text-xs">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  latestRates?.syncedToday ? "bg-emerald-400" : "bg-amber-400"
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  latestRates?.syncedToday ? "bg-emerald-500" : "bg-amber-500"
+                }`}
+              />
+            </span>
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <span>Tỷ giá mới nhất trong hệ thống:</span>
+              <Badge variant="outline" className="font-bold text-primary border-primary/30">
+                {latestRates?.latestDate ? formatDateDisplay(latestRates.latestDate) : "Đang kiểm tra..."}
+              </Badge>
+            </div>
+            <span className="text-muted-foreground hidden md:inline">•</span>
+            <span className="text-muted-foreground">
+              {latestRates?.syncedToday
+                ? "Tự động đồng bộ từ Database & thị trường quốc tế"
+                : "Hệ thống tự động kiểm tra và cập nhật khi có phiên giao dịch mới"}
+            </span>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLatestRates(true)}
+            disabled={syncing}
+            className="h-7 px-2.5 text-xs font-semibold gap-1.5 self-start sm:self-auto hover:border-primary transition-all"
+            title="Kiểm tra và đồng bộ lại tỷ giá từ API nguồn"
+          >
+            <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin text-primary" : "text-muted-foreground"}`} />
+            <span>{syncing ? "Đang đồng bộ..." : "Đồng bộ ngay"}</span>
+          </Button>
+        </div>
+
+        {/* Sync Notification Banner if just synced */}
+        {syncNotification && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium flex items-center gap-2 animate-in fade-in-50 duration-300">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+            <span>{syncNotification}</span>
+          </div>
+        )}
+
         {/* Top Two-Column Conversion & Benchmark Row */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Interactive Converter Card */}
